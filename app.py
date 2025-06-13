@@ -1,12 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import geopandas as gpd
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')  # ✅ Use non-GUI backend for servers
-import matplotlib.pyplot as plt
 
-import io
-import base64
 
 app = Flask(__name__)
 
