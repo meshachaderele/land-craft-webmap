@@ -314,8 +314,8 @@ function searchFeature() {
 
 map.addControl(searchControl);
 
-const lowColor = "#FFEDA0";
-const highColor = "#800026";
+const lowColor = "#370F90";
+const highColor = "#F1F637";
 const NUM_BINS = 10;
 
 let bins = [];
@@ -371,10 +371,10 @@ function loadMapLayer() {
 
             let totalMap = new Map(); // Use let so we can reassign it
 
-            fetch(`/all_delta_n?level=${level}&landuse=${landuse}`)
+            fetch(`/all_n_surplus?level=${level}&landuse=${landuse}`)
                 .then(res => res.json())
-                .then(allDeltaNs => {
-                    const values = Object.values(allDeltaNs);
+                .then(allNsurplus => {
+                    const values = Object.values(allNsurplus);
                     const minVal = Math.min(...values);
                     const maxVal = Math.max(...values);
                     const binSize = (maxVal - minVal) / NUM_BINS;
@@ -386,7 +386,7 @@ function loadMapLayer() {
                         colors.push(interpolateColor(lowColor, highColor, i / (NUM_BINS - 1)));
                     }
 
-                    totalMap = new Map(Object.entries(allDeltaNs)); // Now we reassign safely
+                    totalMap = new Map(Object.entries(allNsurplus)); // Now we reassign safely
 
                     geoLayer = L.geoJSON(data, {
                         style: feature => {
@@ -652,7 +652,7 @@ legend.onAdd = function () {
     const safeColors = colors.length === NUM_BINS ? colors : ['#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0', '#FFEDA0'];
     const isFullBudget = variable === "full_n_budget";
     const isNational = level === "national";
-    const variableLabel = isFullBudget ? "ΔN" : (variableLabelMap[variable] || "Variable");
+    const variableLabel = isFullBudget ? "N Surplus" : (variableLabelMap[variable] || "Variable");
     //const variableSuffix = isFullBudget ? "(kg N ha⁻¹ yr⁻¹)" : (variableSuffixMap[variable] || "(kt N yr⁻¹)");
     const variableSuffix = isFullBudget
   ? "(kg N ha⁻¹ yr⁻¹)"
@@ -663,7 +663,7 @@ legend.onAdd = function () {
     div.innerHTML += `<b>Average ${variableLabel} <span style="display: block;">${variableSuffix}</span></b><br>`;
  
 
-    for (let i = 0; i < NUM_BINS; i++) {
+    for (let i = NUM_BINS - 1; i >= 0; i--) {
         const from = formatLegendValue(safeBins[i]);
         const to = safeBins[i + 1] ? formatLegendValue(safeBins[i + 1]) : formatLegendValue(maxVal);
         div.innerHTML += `<i style="background:${safeColors[i]}"></i> ${from}&ndash;${to}<br>`;

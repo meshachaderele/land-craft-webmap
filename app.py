@@ -54,7 +54,7 @@ def get_n_budget_dicts(df, level, name, landuse):
 
 import json
 
-with open("data/n_budget_dicts_updt.json") as f:
+with open("data/n_budget_dicts_n_surplus.json") as f:
     n_budget_data = json.load(f)
 
 def get_n_budget_from_json(level, name, landuse):
@@ -157,8 +157,8 @@ def full_n_plot():
 # at country level, kilotonnes and tonnes for other levels
 
 
-@app.route("/all_delta_n")
-def all_delta_n():
+@app.route("/all_n_surplus")
+def all_n_surplus():
     level = request.args.get("level")
     landuse = request.args.get("landuse")
 
@@ -177,9 +177,9 @@ def all_delta_n():
             parts = key.split("__")
             if len(parts) == 3:
                 name = parts[1]
-                delta_n = n_budget_data[key].get("delta_n")
-                if delta_n is not None:
-                    results[name] = round(delta_n, 2)
+                n_surplus = n_budget_data[key].get("n_surplus")
+                if n_surplus is not None:
+                    results[name] = round(n_surplus, 2)
 
     return jsonify(results)
 
