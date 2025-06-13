@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Danish Agroecology Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-geosearch@latest/dist/bundle.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@latest/dist/geosearch.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        #map { height: 80vh; width: 100%; }
+        #controls { padding: 10px; background: white; }
+        .popup-chart { width: 300px; height: 200px; }
+    </style>
+</head>
+<body>
+  <div id="header">
+    <div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <img src="static/logo.png" alt="Logo" id="logo" />
+      <img src="static/au-logo.png" alt="AU Logo" id="logo" />
+      <span></span>   
+    </div>
+    <p style="font-size: 16px;">Land-CRAFT GHG Platform: From Field to National Scale in Denmark</p>
+    </div>
+    
+    <button id="hamburger">&#9776;</button>
+  </div>
+
+  <div id="container">
+    <div id="controls">
+      
+        <label style="font-size: 18px; padding-top: 20px; padding-bottom: 20px;">Select Admin Layer</label>
+    <label>Geo Level:
+        <select id="level">
+          <option value="national">National</option>
+          <option value="region">Region</option>
+          <option value="kommune">Kommune</option>
+          <option value="treparter">Treparter</option>
+          <option value="id15_catchment">ID15 Catchment</option>
+          <option value="coastal_catchment">Coastal Catchment</option>
+          <option value="farm">Farm Level (restricted)</option>
+          <option value="field">Field Level (restricted)</option>
+        </select>
+      </label>
+      <label>Land Use:
+        <select id="landuse" onchange="updateVariableOptions()">
+           <option value="" disabled selected>Select a Land Use</option>
+          <option value="cropgrass">Crop & Grassland</option>
+          <option value="forest">Forest</option>
+          <option value="livestock">Livestock</option>
+        </select>
+      </label>
+
+      <label>Variable:
+        <select id="variable" onchange="loadMapLayer()">
+          <option value="" disabled selected>Select a variable</option>
+        
+          <!-- Options will be populated by JavaScript -->
+        </select>
+      </label>
+
+      <button onclick="loadMapLayer()">Load Layer</button>
+      <label class="search-label">
+  Search Layer:
+  <div class="search-wrapper">
+    <input type="text" id="custom-search" placeholder="e.g. 123456 or Aarhus" />
+    <i class="fa fa-search search-icon"></i>
+  </div>
+</label>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <script>
+document.getElementById("custom-search").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        searchFeature();
+    }
+});
+
+
+
+
+const allOptions = {
+  cropgrass: ["N2O", "NO3", "DON_NH4", "N2", "NH3", "Dep", "BNF", "Fert", "Harv", "NO", "full_n_budget"], // CH4 excluded
+  forest: [], // No options
+  livestock: ["CH4", "NH3"]
+};
+
+const optionLabels = {
+  N2O: "N₂O",
+  NO3: "NO₃",
+  DON_NH4: "DON + NH₄",
+  N2: "N₂",
+  NH3: "NH₃",
+  Dep: "Deposition",
+  BNF: "BNF",
+  Fert: "Fertilizer",
+  Harv: "Harvested N",
+  NO: "NO",
+  CH4: "CH₄",
+  full_n_budget: "Full N Budget"
+};
+
+function updateVariableOptions() {
+  const landuse = document.getElementById("landuse").value;
+  const variableSelect = document.getElementById("variable");
+
+  // Clear existing options
+  variableSelect.innerHTML = "";
+
+  // Add placeholder
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select a variable";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  variableSelect.appendChild(placeholder);
+
+  // Add options if any
+  const options = allOptions[landuse];
+  options.forEach(val => {
+    const option = document.createElement("option");
+    option.value = val;
+    option.textContent = optionLabels[val];
+    variableSelect.appendChild(option);
+  });
+
+  // Optionally trigger map layer load only if options exist
+  if (options.length > 0) {
+    // Do not call loadMapLayer() here unless user selects a real option
+  }
+}
+    const hamburger = document.getElementById("hamburger");
+    const controls = document.getElementById("controls");
+
+    hamburger.addEventListener("click", () => {
+      controls.classList.toggle("show");
+    });
+  </script>
+
+
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+
+<footer style="background-color: #f8f8f8; text-align: center; padding: 15px; font-size: 14px; color: #555; margin-top: 0px;">
+    <p style="text-align: center; font-size: 14px;">
+  For inquiries, please contact: 
+  Meshach O. Aderele (<a href="mailto:meshach.aderele@agro.au.dk">meshach.aderele@agro.au.dk</a>), 
+  Jaber Rahimi (<a href="mailto:jaber.rahim@kit.edu">jaber.rahim@kit.edu</a>), 
+  João Serra (<a href="mailto:jserra@agro.au.dk">jserra@agro.au.dk</a>).
+  </footer>
+</body>
+</html>
