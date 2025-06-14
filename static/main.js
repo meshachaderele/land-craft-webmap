@@ -60,7 +60,7 @@ const searchControl = new window.GeoSearch.GeoSearchControl({
 });
 
 
-function plotNitrogenBudget(container, Ger_input_dict, Ger_output_dict, year = 'average', title = "Full Nitrogen Budget") {
+function plotNitrogenBudget(container, Ger_input_dict, Ger_output_dict, year = 'average', title = "Full Nitrogen Budget", suffix) {
     const isMobile = window.innerWidth <= 768;
     const N_in_list = ['Fert', 'Dep', 'BNF'];
     const N_emit_list = ['N2O', 'NH3', 'N2', 'NO'];
@@ -223,7 +223,7 @@ function plotNitrogenBudget(container, Ger_input_dict, Ger_output_dict, year = '
             tickfont: { size: isMobile ? 8 : 12 },
             automargin: true,
             title: {
-                    text: 'Cumulative N flux [kt N2O-N yr⁻¹]',
+                    text: `Cumulative N flux ${suffix}`,
                     font: {
                         size: isMobile ? 10 : 14
                     }},
@@ -415,8 +415,13 @@ function loadMapLayer() {
 
                                    const  title_p = `${landuseLabelMap[landuse]}<br>${levelLabelMap[level]}${name}`;
 
+                                   const isNational = level === "national";
+                                        const suffix = isNational
+                                            ? "(kt N yr⁻¹)"
+                                            : variableSuffixMap[variable] || "(t N yr⁻¹)";
+
                                     // No need to set div.style.width/height explicitly
-                                    plotNitrogenBudget(div, data.input, data.output, 'average', title_p);
+                                    plotNitrogenBudget(div, data.input, data.output, 'average', title_p, suffix);
 
                                     // Wait for Plotly to render before calculating offset
                                     setTimeout(() => {
@@ -551,7 +556,10 @@ function loadMapLayer() {
                                         const isMobile = window.innerWidth <= 768;
                                         const titleFontSize = isMobile ? 10 : 18;
                                         const isNational = level === "national";
-                                        const suffix = isNational ? "(kt N yr⁻¹)" : variableSuffixMap[variable];
+                                        const suffix = isNational
+                                            ? "(kt N₂O-N yr⁻¹)"
+                                            : variableSuffixMap[variable] || "(t N₂O-N yr⁻¹)";
+
                                         
 
                                         Plotly.newPlot(div, [{
@@ -653,20 +661,20 @@ legend.onAdd = function () {
     const isFullBudget = variable === "full_n_budget";
     const isNational = level === "national";
     const variableLabel = isFullBudget ? "N Surplus" : (variableLabelMap[variable] || "Variable");
-    //const variableSuffix = isFullBudget ? "(kg N ha⁻¹ yr⁻¹)" : (variableSuffixMap[variable] || "(kt N yr⁻¹)");
-    const variableSuffix = isFullBudget
-  ? "(t N ha⁻¹ yr⁻¹)"
-  : isNational
+    const variableSuffix = (isNational === true)
     ? "(kt N yr⁻¹)"
-    : (variableSuffixMap[variable] || "(kt N yr⁻¹)");
+    : "(t N yr⁻¹)";
+    
+
 
     div.innerHTML += `<b>Average Cummulative ${variableLabel} <span style="display: block;">${variableSuffix}</span></b><br>`;
  
 
-    for (let i = NUM_BINS - 1; i >= 0; i--) {
-        const from = formatLegendValue(safeBins[i]);
-        const to = safeBins[i + 1] ? formatLegendValue(safeBins[i + 1]) : formatLegendValue(maxVal);
-        div.innerHTML += `<i style="background:${safeColors[i]}"></i> ${from}&ndash;${to}<br>`;
+
+    for (let i = NUM_BINS - 1; i > 0; i--) {
+        const from = formatLegendValue(safeBins[i - 1]);   // lower edge
+        const to   = formatLegendValue(safeBins[i]);       // upper edge
+        div.innerHTML += `<i style="background:${safeColors[i - 1]}"></i> ${from}&ndash;${to}<br>`;
     }
 
     return div;
