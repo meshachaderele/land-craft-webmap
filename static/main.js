@@ -394,9 +394,9 @@ function loadMapLayer() {
                             const value = totalMap.get(name) || 0;
                             return {
                                 fillColor: getColor(value),
-                                weight: 1,
+                                weight: 0.5,
                                 opacity: 1,
-                                color: '#333333',
+                                color: 'grey',
                                 fillOpacity: 0.7
                             };
                         },
@@ -655,12 +655,12 @@ legend.onAdd = function () {
     const variableLabel = isFullBudget ? "N Surplus" : (variableLabelMap[variable] || "Variable");
     //const variableSuffix = isFullBudget ? "(kg N ha⁻¹ yr⁻¹)" : (variableSuffixMap[variable] || "(kt N yr⁻¹)");
     const variableSuffix = isFullBudget
-  ? "(kg N ha⁻¹ yr⁻¹)"
+  ? "(t N ha⁻¹ yr⁻¹)"
   : isNational
     ? "(kt N yr⁻¹)"
     : (variableSuffixMap[variable] || "(kt N yr⁻¹)");
 
-    div.innerHTML += `<b>Average ${variableLabel} <span style="display: block;">${variableSuffix}</span></b><br>`;
+    div.innerHTML += `<b>Average Cummulative ${variableLabel} <span style="display: block;">${variableSuffix}</span></b><br>`;
  
 
     for (let i = NUM_BINS - 1; i >= 0; i--) {
