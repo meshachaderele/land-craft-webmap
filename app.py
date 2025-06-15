@@ -19,33 +19,6 @@ emissions_df = pd.read_parquet("data/data_aggregated.parquet")
 valid_levels = ["national", "kommune", "region", "treparter", "id15_catchment", "coastal_catchment"]
 valid_variables = ["N2O", "NO3", "N2", "DON_NH4", "NH3", "Dep", "BNF", "Fert", "Harv", "NO"]
 
-"""
-def get_n_budget_dicts(df, level, name, landuse):
-    valid_variables = ["N2O", "NO3", "N2", "NH3", 'DON_NH4', "Dep", "BNF", "Fert", "Harv", "NO"]
-
-    if landuse:
-        df = df[df["landuse"] == landuse]
-
-    if level == "national":
-        subset = df.groupby("year")[valid_variables].sum()
-    else:
-        df[level] = df[level].astype(str)
-        subset = df[df[level] == name].groupby("year")[valid_variables].sum()
-
-    avg = subset.mean()
-
-    Ger_input_dict = {
-        k: {'average': avg[k] / KG_TO_KILOTONNE}
-        for k in ["Fert", "Dep", "BNF"]
-    }
-    Ger_output_dict = {
-        k: {'average': avg[k] / KG_TO_KILOTONNE}
-        for k in ["Harv", "NO3", "DON_NH4", "N2O", "NH3", "N2", "NO"]
-    }
-
-    return Ger_input_dict, Ger_output_dict
-
-"""
 
 import json
 

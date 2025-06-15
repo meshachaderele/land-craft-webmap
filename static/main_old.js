@@ -388,119 +388,11 @@ function loadMapLayer() {
     const variable = document.getElementById("variable").value;
     const landuse = document.getElementById("landuse").value;
 
+    // ✅ HANDLE full_n_budget separately
     if (variable === "full_n_budget") {
-        fetch(`/geojson/${level}`)
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to load geojson");
-                return res.json();
-            })
-            .then(data => {
-                const propertyMap = {
-                    national: "NAME_0",
-                    region: "REGIONNAVN",
-                    kommune: "NAME_2",
-                    treparter: "ogc_fid",
-                    coastal_catchment: "IdKystvand",
-                    id15_catchment: "Id15_oplan"
-                };
-
-                return fetch(`/all_n_surplus?level=${level}&landuse=${landuse}`)
-                    .then(res => {
-                        if (!res.ok) throw new Error("Failed to load N surplus data");
-                        return res.json();
-                    })
-                    .then(allNsurplus => {
-                        const values = Object.values(allNsurplus);
-                        const minVal = Math.min(...values);
-                        const maxVal = Math.max(...values);
-                        const binSize = (maxVal - minVal) / NUM_BINS;
-
-                        bins = [];
-                        colors = [];
-                        for (let i = 0; i < NUM_BINS; i++) {
-                            bins.push(minVal + i * binSize);
-                            colors.push(interpolateColor(lowColor, highColor, i / (NUM_BINS - 1)));
-                        }
-
-                        const totalMap = new Map(Object.entries(allNsurplus));
-
-                        geoLayer = L.geoJSON(data, {
-                            style: feature => {
-                                const name = String(feature.properties[propertyMap[level]]);
-                                const value = totalMap.get(name) || 0;
-                                return {
-                                    fillColor: getColor(value),
-                                    weight: 0.5,
-                                    opacity: 1,
-                                    color: 'grey',
-                                    fillOpacity: 0.7
-                                };
-                            },
-                            onEachFeature: function (feature, layer) {
-                                layer.on('click', function () {
-                                    const name = String(feature.properties[propertyMap[level]]);
-                                    fetch(`/full-n-chart-data?level=${level}&name=${encodeURIComponent(name)}&landuse=${landuse}`)
-                                        .then(res => {
-                                            if (!res.ok) throw new Error("Failed to load chart data");
-                                            return res.json();
-                                        })
-                                        .then(data => {
-                                            const div = document.createElement("div");
-                                            div.className = "popup-chart";
-
-                                            const isMobile = window.innerWidth <= 768;
-                                            const title_p = `${landuseLabelMap[landuse]}<br>${levelLabelMap[level]}${name}`;
-                                            const isNational = level === "national";
-                                            const suffix = isNational ? "(kt N yr⁻¹)" : variableSuffixMap[variable] || "(t N yr⁻¹)";
-
-                                            plotNitrogenBudget(div, data.input, data.output, 'average', title_p, suffix);
-
-                                            setTimeout(() => {
-                                                const popupWidth = div.offsetWidth;
-                                                const center = map.getCenter();
-
-                                                const popup = L.popup({
-                                                    closeButton: true,
-                                                    autoClose: true,
-                                                    className: 'custom-chart-popup',
-                                                    offset: L.point(-350, 0),
-                                                    maxWidth: popupWidth
-                                                })
-                                                .setLatLng(center)
-                                                .setContent(div)
-                                                .openOn(map);
-
-                                                map.on('popupclose', () => div.remove());
-                                            }, 100);
-                                        })
-                                        .catch(err => {
-                                            console.error(err);
-                                            alert("Error loading chart popup.");
-                                        });
-                                });
-                            }
-                        }).addTo(map);
-
-                        legend.remove();
-                        legend.addTo(map);
-                    });
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Error loading full nitrogen budget.");
-            })
-            .finally(() => hideLoading());
-
-        return;
-    }
-
-    // Regular variable branch
-    fetch(`/totals?level=${level}&variable=${variable}&landuse=${landuse}`)
-        .then(res => {
-            if (!res.ok) throw new Error("Failed to load totals data");
-            return res.json();
-        })
-        .then(totals => {
+    fetch(`/geojson/${level}`)
+        .then(res => res.json())
+        .then(data => {
             const propertyMap = {
                 national: "NAME_0",
                 region: "REGIONNAVN",
@@ -510,17 +402,126 @@ function loadMapLayer() {
                 id15_catchment: "Id15_oplan"
             };
 
+            let totalMap = new Map(); // Use let so we can reassign it
+
+            fetch(`/all_n_surplus?level=${level}&landuse=${landuse}`)
+                .then(res => res.json())
+                .then(allNsurplus => {
+                    const values = Object.values(allNsurplus);
+                    const minVal = Math.min(...values);
+                    const maxVal = Math.max(...values);
+                    const binSize = (maxVal - minVal) / NUM_BINS;
+
+                    bins = [];
+                    colors = [];
+                    for (let i = 0; i < NUM_BINS; i++) {
+                        bins.push(minVal + i * binSize);
+                        colors.push(interpolateColor(lowColor, highColor, i / (NUM_BINS - 1)));
+                    }
+
+                    totalMap = new Map(Object.entries(allNsurplus)); // Now we reassign safely
+
+                    geoLayer = L.geoJSON(data, {
+                        style: feature => {
+                            const name = String(feature.properties[propertyMap[level]]);
+                            const value = totalMap.get(name) || 0;
+                            return {
+                                fillColor: getColor(value),
+                                weight: 0.5,
+                                opacity: 1,
+                                color: 'grey',
+                                fillOpacity: 0.7
+                            };
+                        },
+                    onEachFeature: function (feature, layer) {
+                        layer.on('click', function () {
+                            const name = String(feature.properties[propertyMap[level]]);
+
+                            // 🔥 Plot only when clicked — fetch image only
+                            fetch(`/full-n-chart-data?level=${level}&name=${encodeURIComponent(name)}&landuse=${landuse}`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    const div = document.createElement("div");
+                                    div.className = "popup-chart";
+
+                                    const isMobile = window.innerWidth <= 768;
+
+                                   const  title_p = `${landuseLabelMap[landuse]}<br>${levelLabelMap[level]}${name}`;
+
+                                   const isNational = level === "national";
+                                        const suffix = isNational
+                                            ? "(kt N yr⁻¹)"
+                                            : variableSuffixMap[variable] || "(t N yr⁻¹)";
+
+                                    // No need to set div.style.width/height explicitly
+                                    plotNitrogenBudget(div, data.input, data.output, 'average', title_p, suffix);
+
+                                    // Wait for Plotly to render before calculating offset
+                                    setTimeout(() => {
+                                        const popupWidth = div.offsetWidth;
+                                        const center = map.getCenter();
+
+                                        const popup = L.popup({
+                                            closeButton: true,
+                                            autoClose: true,
+                                            className: 'custom-chart-popup',
+                                            offset: L.point(-350, 0),  // dynamically center based on rendered width
+                                            maxWidth: popupWidth
+                                        })
+                                        .setLatLng(center)
+                                        .setContent(div)
+                                        .openOn(map);
+
+                                        map.on('popupclose', () => div.remove());
+                                    }, 100); // Give Plotly time to render
+                                })
+                                .catch(err => console.error("Failed to load nitrogen chart data:", err));
+
+
+
+
+                        });
+                    }
+
+                }).addTo(map);
+
+                legend.remove();
+                legend.addTo(map);
+                hideLoading();
+            }).catch(err => { console.error(err); hideLoading(); });
+        });
+
+    return;
+}
+
+
+ 
+
+
+    fetch(`/totals?level=${level}&variable=${variable}`)
+        .then(res => res.json())
+        .then(totals => {
+            const propertyMap = {
+            national: "NAME_0",
+            region: "REGIONNAVN",
+            kommune: "NAME_2",
+            treparter: "ogc_fid",
+            coastal_catchment: "IdKystvand",
+            id15_catchment: "Id15_oplan"
+            };
+
             const propertyName = propertyMap[level];
             const totalMap = new Map();
             const allValues = [];
 
             totals.forEach(d => {
-                const key = d[propertyName] || d[level];
+                const key = d[propertyName] || d[level];  // fallback if backend doesn't use propertyName
                 if (key != null) {
                     totalMap.set(String(key), d[variable]);
                     allValues.push(d[variable]);
                 }
             });
+
 
             const minVal = Math.min(...allValues);
             maxVal = Math.max(...allValues);
@@ -533,14 +534,12 @@ function loadMapLayer() {
                 colors.push(interpolateColor(lowColor, highColor, i / (NUM_BINS - 1)));
             }
 
-            return fetch(`/geojson/${level}`)
-                .then(res => {
-                    if (!res.ok) throw new Error("Failed to load geojson");
-                    return res.json();
-                })
+            fetch(`/geojson/${level}`)
+                .then(res => res.json())
                 .then(data => {
                     geoLayer = L.geoJSON(data, {
                         style: feature => {
+
                             const name = String(feature.properties[propertyName] || "Unknown");
                             const value = totalMap.get(name) || 0;
                             return {
@@ -553,23 +552,35 @@ function loadMapLayer() {
                         },
                         onEachFeature: function (feature, layer) {
                             layer.on('click', function () {
-                                const name = String(feature.properties[propertyMap[level]] || "Unknown");
+                                const propertyMap = {
+                                national: "NAME_0",
+                                region: "REGIONNAVN",
+                                kommune: "NAME_2",
+                                treparter: "ogc_fid",
+                                coastal_catchment: "IdKystvand",
+                                id15_catchment: "Id15_oplan"
+                            };
 
+                       
+
+                            const name = String(feature.properties[propertyMap[level]] || "Unknown");
+                            
                                 fetch(`/chart-data?level=${level}&name=${encodeURIComponent(name)}&variable=${variable}&landuse=${landuse}`)
-                                    .then(res => {
-                                        if (!res.ok) throw new Error("Failed to load chart data");
-                                        return res.json();
-                                    })
+                                    .then(res => res.json())
                                     .then(data => {
                                         const years = data.map(d => d.year);
                                         const values = data.map(d => d[variable]);
                                         const div = document.createElement('div');
                                         div.className = 'popup-chart';
-
+                                        
                                         const isMobile = window.innerWidth <= 768;
                                         const titleFontSize = isMobile ? 10 : 18;
                                         const isNational = level === "national";
-                                        const suffix = isNational ? "(kt N₂O-N yr⁻¹)" : variableSuffixMap[variable] || "(t N₂O-N yr⁻¹)";
+                                        const suffix = isNational
+                                            ? "(kt N₂O-N yr⁻¹)"
+                                            : variableSuffixMap[variable] || "(t N₂O-N yr⁻¹)";
+
+                                        
 
                                         Plotly.newPlot(div, [{
                                             x: years,
@@ -577,14 +588,17 @@ function loadMapLayer() {
                                             type: 'scatter',
                                             mode: 'lines+markers',
                                             line: { color: '#007BFF' },
-                                            marker: { color: '#FF5733', size: 10 }
+                                            marker: { color: '#FF5733', size: 10 },
                                         }], {
                                             title: {
                                                 text: `${landuseLabelMap[landuse]}<br>${levelLabelMap[level]}${name}`,
-                                                font: { size: titleFontSize }
+                                                font: {
+                                                size: titleFontSize
+                                                }
                                             },
                                             height: isMobile ? 300 : undefined,
                                             width: isMobile ? 400 : undefined,
+                                          
                                             margin: {
                                                 t: isMobile ? 40 : 60,
                                                 b: isMobile ? 30 : 30,
@@ -595,53 +609,57 @@ function loadMapLayer() {
                                                 tickfont: { size: isMobile ? 8 : 12 },
                                                 automargin: true,
                                                 tickvals: years
+                                                
                                             },
                                             yaxis: {
                                                 tickfont: { size: isMobile ? 8 : 12 },
                                                 automargin: true,
                                                 title: {
                                                     text: `${variableLabelMap[variable]} ${suffix}`,
-                                                    font: { size: isMobile ? 10 : 14 }
-                                                }
+                                                    font: {
+                                                        size: isMobile ? 10 : 14
+                                                    }
+                                                },
                                             }
-                                        }, { responsive: true });
-
+                                        },{responsive: true});
+                                        // layer.bindPopup(div).openPopup();
                                         setTimeout(() => {
-                                            const center = map.getCenter();
-                                            L.popup({
-                                                closeButton: true,
-                                                autoClose: true,
-                                                className: 'custom-chart-popup',
-                                                offset: L.point(-200, 0)
-                                            })
-                                            .setLatLng(center)
-                                            .setContent(div)
-                                            .openOn(map);
+                                        const center = map.getCenter();
+                                        L.popup({
+                                            closeButton: true,
+                                            autoClose: true,
+                                            className: 'custom-chart-popup',
+                                            offset: L.point(-200, 0)
+                                        })
+                                        .setLatLng(center)
+                                        .setContent(div)
+                                        .openOn(map);
+                                        console.log(document.querySelector('.leaflet-popup-close-button'));
                                         }, 100);
-                                    })
-                                    .catch(err => {
-                                        console.error(err);
-                                        alert("Error loading chart popup.");
+
+                                        
                                     });
                             });
                         }
                     }).addTo(map);
 
+                    // Refresh legend
                     legend.remove();
                     legend.addTo(map);
-                });
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Error loading variable data.");
-        })
-        .finally(() => hideLoading());
+                    hideLoading(); 
+                }).catch(err => { console.error(err); hideLoading(); });
+        });
 }
 
 
-
 // Legend Control
-
+/* function formatLegendValue(val) {
+    if (val == null || isNaN(val)) return "–";
+    if (val >= 1) return val.toFixed(1);
+    if (val >= 0.01) return val.toFixed(2);
+    //return val.toExponential(2); // fallback for very small values
+    return val
+} */
     function formatLegendValue(val) {
         if (val == null || isNaN(val)) return "–";
         return Number(val).toFixed(2);
