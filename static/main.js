@@ -633,7 +633,7 @@ function loadMapLayer() {
         })
         .catch(err => {
             console.error(err);
-            alert("Error loading variable data.");
+            alert("The visualization for the selected level is restricted. Kindly contact the administrator for access.");
         })
         .finally(() => hideLoading());
 }
